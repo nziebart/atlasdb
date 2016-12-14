@@ -53,6 +53,10 @@ develop
          - Better support Oracle 12c batch responses
            (`Pull Request <https://github.com/palantir/atlasdb/pull/1540>`__)
 
+    *    - |new|
+         - Initial support for tracing Key Value Services integrating with `http-remoting tracing <https://github.com/palantir/http-remoting#tracing>`__.
+           (`Pull Request <https://github.com/palantir/atlasdb/pull/1385>`__)
+
 .. <<<<------------------------------------------------------------------------------------------------------------->>>>
 
 =======
