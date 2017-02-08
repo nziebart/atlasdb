@@ -42,6 +42,7 @@ import com.palantir.nexus.db.SqlClause;
 
 public class SQLString extends BasicSQLString {
     private static final Pattern ALL_WORD_CHARS_REGEX = Pattern.compile("^[a-zA-Z_0-9\\.\\-]*$"); //$NON-NLS-1$
+    private static final String UNREGISTERED_SQL_COMMENT = "/* UnregisteredSQLString */";
 
     /**
      * Callers changing the value of cachedUnregistered and
@@ -251,22 +252,35 @@ public class SQLString extends BasicSQLString {
     /**
      * Cleans up whitespace, any trailing semicolon, and prefixed comments that a string is
      * unregistered, in order to come up with a canonical representation of this sql string.
-     * @param s
-     * @return
      */
-    public static String canonicalizeString(String s) {
-        String trim = s.trim();
-        if(!trim.isEmpty() && trim.charAt(trim.length() - 1) == ';') {
-            trim = trim.substring(0, trim.length() - 1);
-        }
-        String prefix = "/* UnregisteredSQLString */"; //$NON-NLS-1$
-        if (trim.startsWith(prefix)) {
-            trim = trim.substring(prefix.length()).trim();
-        }
-        String [] sp = trim.split("\\s+"); //$NON-NLS-1$
-        return StringUtils.join(sp, " "); //$NON-NLS-1$
-    }
+    public static String canonicalizeString(String original) {
+        StringBuilder cleanedString = new StringBuilder(original);
+        boolean previousCharWasWhitespace = false;
+        int whitespaceCleaningIndex, prefixIndex, cleanedIndex = 0;
 
+        while((prefixIndex = cleanedString.indexOf(UNREGISTERED_SQL_COMMENT)) >= 0) {
+            cleanedString.delete(prefixIndex, prefixIndex + UNREGISTERED_SQL_COMMENT.length());
+        }
+
+        for (whitespaceCleaningIndex = 0; whitespaceCleaningIndex < cleanedString.length(); whitespaceCleaningIndex++) {
+            if (cleanedString.charAt(whitespaceCleaningIndex) == ' ') {
+                previousCharWasWhitespace = true;
+            } else {
+                if (previousCharWasWhitespace && cleanedIndex != 0) { // emit one space, unless it is a leading space
+                    cleanedString.setCharAt(cleanedIndex++,' ');
+                }
+                cleanedString.setCharAt(cleanedIndex++, cleanedString.charAt(whitespaceCleaningIndex));
+                previousCharWasWhitespace = false;
+            }
+        }
+        cleanedString.delete(cleanedIndex, whitespaceCleaningIndex); // trim remaining
+
+        if (cleanedString.charAt(cleanedString.length() - 1) == ';') { // last semicolon is unnecessary
+            cleanedString.deleteCharAt(cleanedString.length() - 1);
+        }
+
+        return cleanedString.toString();
+    }
 
     static class NullSQLString extends SQLString {
         final String key;
